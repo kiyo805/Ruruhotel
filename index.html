@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>東京精選飯店對比</title>
+    <style>
+        :root {
+            --primary-color: #222222; 
+            --bg-color: #F8F8F6; 
+            --card-bg: #FFFFFF;
+            --text-color: #2D2D2D;
+            --text-light: #767676;
+            --border-color: #EEEEEE;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Noto Sans TC", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            letter-spacing: 1px;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1260px;
+            margin: 0 auto;
+            padding: 24px;
+            gap: 24px;
+            height: calc(100vh - 115px); 
+            min-height: 600px;
+        }
+
+        .hotel-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+            padding-bottom: 40px; 
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .hotel-list::-webkit-scrollbar { width: 4px; }
+        .hotel-list::-webkit-scrollbar-thumb { background-color: #DDD; border-radius: 2px; }
+
+        .hotel-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .hotel-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+        }
+
+        .hotel-card.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 1px var(--primary-color), 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        .slider-container {
+            position: relative;
+            width: 100%;
+            height: 260px;
+            overflow: hidden;
+            background-color: #F0F0F0;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .slider-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            color: #111;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            z-index: 2;
+        }
+
+        .slider-btn:hover { background: #FFFFFF; transform: translateY(-50%) scale(1.05); }
+        .slider-prev { left: 16px; }
+        .slider-next { right: 16px; }
+
+        .slider-dots {
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 2;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transition: all 0.3s;
+        }
+
+        .dot.active { background: #FFFFFF; width: 14px; border-radius: 3px; }
+
+        .hotel-info {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .hotel-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1A1A1A;
+            line-height: 1.4;
+        }
+
+        .hotel-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background-color: #F5F5F3;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .price-tag {
+            background-color: #1A1A1A;
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+
+        .details-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #FAFAFA;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #F0F0F0;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .details-row { display: flex; gap: 16px; }
+        .details-item strong { color: #333; margin-right: 4px; }
+
+        .hotel-notes {
+            font-size: 0.88rem;
+            color: #4A4A4A;
+            background-color: #FDFDFD;
+            border-left: 2px solid #DDD;
+            padding: 6px 12px;
+            margin-top: 2px;
+            white-space: pre-line;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-map {
+            background-color: #FFFFFF;
+            color: #333;
+            border: 1px solid #E0E0E0;
+        }
+
+        .btn-map:hover { background-color: #FAFAFA; border-color: #BBB; }
+
+        .btn-transit {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-transit:hover { background-color: #444444; }
+
+        .map-container {
+            flex: 1.1; 
+            position: sticky;
+            top: 0;
+            height: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        }
+
+        .map-container iframe { width: 100%; height: 100%; border: none; }
+
+        /* 📱 針對手機與小螢幕的極簡時尚優化排版 */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; height: auto; padding: 14px; gap: 16px; }
+            .map-container { height: 320px; order: 1; border-radius: 8px; position: sticky; top: 0; z-index: 10; }
+            .hotel-list { order: 2; overflow-y: visible; padding-right: 0; gap: 20px; }
+            header { padding: 20px 10px; }
+            .slider-container { height: 200px; } /* 手機上卡片照片高度稍微縮小，比例更精緻 */
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="main-title">TOKYO HOTEL GUIDANCE</h1>
+        <p>點擊「飯店卡片」切換單間地圖 / 點擊上方標題返回「全飯店總覽」</p>
+    </header>
+
+    <div class="container">
+        <div class="hotel-list" id="hotel-list">
+            <p style="text-align: center; padding: 20px; color: #999; font-size: 0.9rem;">SELECTING BEST PLACES...</p>
+        </div>
+        <div class="map-container">
+            <iframe id="google-map" src="about:blank" allowfullscreen="" loading="lazy"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSo_5C69y2LqOigriDuyjg-FrtFRmGSYNwbQJ7NuxhHL8jx5CHdEmMvlIcyI-H1eKwrWB-pUM9SwRFq/pub?output=csv";
+        let globalHotels = []; 
+
+        function parseCSV(text) {
+            let p = '', c = '', r = [];
+            let q = false;
+            let row = [''];
+            
+            for (let i=0; i<text.length; i++) {
+                c = text[i];
+                let next = text[i+1];
+                if (c === '"') {
+                    if (q && next === '"') { row[row.length-1] += '"'; i++; }
+                    else { q = !q; }
+                } else if (c === ',' && !q) {
+                    row.push('');
+                } else if ((c === '\r' || c === '\n') && !q) {
+                    if (c === '\r' && next === '\n') { i++; }
+                    r.push(row);
+                    row = [''];
+                } else {
+                    row[row.length-1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== '') { r.push(row); }
+            if (r.length === 0) return [];
+            
+            const headers = r[0].map(h => h.trim().replace(/^"|"$/g, ''));
+            const dataObjects = [];
+            
+            for (let i = 1; i < r.length; i++) {
+                const currentRow = r[i];
+                if (currentRow.length === 0 || (currentRow.length === 1 && currentRow[0] === '')) continue;
+                
+                const obj = {};
+                headers.forEach((header, index) => {
+                    let val = currentRow[index] ? currentRow[index].trim() : "";
+                    obj[header] = val;
+                });
+                dataObjects.push(obj);
+            }
+            return dataObjects;
+        }
+
+        function convertToEmbedUrl(mapLink, address) {
+            if (!mapLink || mapLink === "#") {
+                return `https://maps.google.com/maps?q=${encodeURIComponent(address || '東京錦糸町')}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+            }
+            if (mapLink.includes("maps.google.com") || mapLink.includes("goo.gl/maps")) {
+                return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+            }
+            return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+        }
+
+        // 🌟 優化版：初始畫面顯示東京錦糸町一帶的全景大範圍地圖
+        function showAllHotelsMap() {
+            const iframe = document.getElementById('google-map');
+            document.querySelectorAll('.hotel-card').forEach(card => card.classList.remove('active'));
+            
+            // 直接定位在錦糸町中心，並把縮放度（z）調到 14，剛好可以在地圖中完整包容你推薦的那幾家飯店！
+            iframe.src = `https://maps.google.com/maps?q=${encodeURIComponent("東京錦糸町")}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+        }
+
+        function switchMap(mapLink, address, cardElement) {
+            const iframe = document.getElementById('google-map');
+            iframe.src = convertToEmbedUrl(mapLink, address);
+            document.querySelectorAll('.hotel-card').forEach(card => card.classList.remove('active'));
+            if(cardElement) cardElement.classList.add('active');
+        }
+
+        function initSlider(cardId, totalImages) {
+            if (totalImages <= 1) return;
+            const card = document.getElementById(cardId);
+            const wrapper = card.querySelector('.slider-wrapper');
+            const dots = card.querySelectorAll('.dot');
+            let currentIndex = 0;
+
+            function updateSlider() {
+                wrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+                dots.forEach((dot, idx) => {
+                    dot.classList.toggle('active', idx === currentIndex);
+                });
+            }
+
+            card.querySelector('.slider-prev').addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentIndex = (currentIndex === 0) ? totalImages - 1 : currentIndex - 1;
+                updateSlider();
+            });
+
+            card.querySelector('.slider-next').addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentIndex = (currentIndex === totalImages - 1) ? 0 : currentIndex + 1;
+                updateSlider();
+            });
+        }
+
+        async function fetchHotels() {
+            const container = document.getElementById('hotel-list');
+            try {
+                const response = await fetch(`${csvUrl}&t=${new Date().getTime()}`);
+                const csvText = await response.text();
+                const hotels = parseCSV(csvText);
+                
+                container.innerHTML = ""; 
+                globalHotels = hotels.filter(h => h.name && !h.name.startsWith('Websites'));
+
+                if(globalHotels.length === 0) {
+                    container.innerHTML = "<p style='text-align:center;padding:20px;color:#999;'>目前試算表中沒有飯店資料喔！</p>";
+                    return;
+                }
+
+                globalHotels.forEach((hotel, index) => {
+                    const name = hotel.name || "未命名飯店";
+                    const roomType = hotel.roomType || "標準房型";
+                    const price = hotel.price || "未提供價格";
+                    const address = hotel.address || "東京";
+                    const mapLink = hotel.mapLink || "#";
+                    
+                    const checkIn = hotel.checkIn || "15:00";
+                    const checkOut = hotel.checkOut || "11:00";
+                    const notes = hotel.notes || "";
+                    const breakfast = hotel.breakfast || "未註明";
+                    const bathtub = hotel.bathtub || "未註明";
+
+                    const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(address)}&destination=Haneda+Airport&travelmode=transit`;
+                    
+                    let imgField = hotel.img || "";
+                    let imgUrls = imgField.split(',').map(url => url.trim()).filter(url => url.startsWith('http'));
+                    if (imgUrls.length === 0) {
+                        imgUrls = ["https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600"];
+                    }
+
+                    let imagesHtml = '';
+                    let dotsHtml = '';
+                    imgUrls.forEach((url, idx) => {
+                        imagesHtml += `<img src="${url}" alt="${name}" onerror="this.src='https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600'">`;
+                        dotsHtml += `<span class="dot ${idx === 0 ? 'active' : ''}"></span>`;
+                    });
+
+                    const showControls = imgUrls.length > 1;
+                    const cardId = `hotel-card-${index}`;
+
+                    const card = document.createElement('div');
+                    card.className = `hotel-card`;
+                    card.id = cardId;
+
+                    card.innerHTML = `
+                        <div class="slider-container">
+                            <div class="slider-wrapper">${imagesHtml}</div>
+                            ${showControls ? `<button class="slider-btn slider-prev" type="button">❮</button>` : ''}
+                            ${showControls ? `<button class="slider-btn slider-next" type="button">❯</button>` : ''}
+                            ${showControls ? `<div class="slider-dots">${dotsHtml}</div>` : ''}
+                        </div>
+                        <div class="hotel-info">
+                            <div class="hotel-name">${name}</div>
+                            <div class="hotel-meta">
+                                <span class="tag room-tag">${roomType}</span>
+                                <span class="tag price-tag">${price}</span>
+                            </div>
+                            
+                            <div class="details-box">
+                                <div class="details-row">
+                                    <div class="details-item"><strong>Check-in</strong> ${checkIn}</div>
+                                    <div class="details-item"><strong>Check-out</strong> ${checkOut}</div>
+                                </div>
+                                <div class="details-row" style="border-top: 1px dashed #EAEAEA; padding-top: 6px; margin-top: 2px;">
+                                    <div class="details-item"><strong>🍳 早餐：</strong> ${breakfast}</div>
+                                    <div class="details-item"><strong>🛁 浴缸：</strong> ${bathtub}</div>
+                                </div>
+                            </div>
+                            
+                            ${notes ? `<div class="hotel-notes">${notes}</div>` : ''}
+                            
+                            <div class="btn-group">
+                                <button class="btn btn-map" type="button">查看位置</button>
+                                <a href="${transitUrl}" target="_blank" class="btn btn-transit" onclick="event.stopPropagation();">🚊 查詢去羽田交通</a>
+                            </div>
+                        </div>
+                    `;
+
+                    card.addEventListener('click', () => switchMap(mapLink, address, card));
+                    card.querySelector('.btn-map').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        switchMap(mapLink, address, card);
+                    });
+
+                    container.appendChild(card);
+                    if (showControls) initSlider(cardId, imgUrls.length);
+                });
+
+                showAllHotelsMap();
+                
+                document.getElementById('main-title').style.cursor = 'pointer';
+                document.getElementById('main-title').addEventListener('click', showAllHotelsMap);
+
+            } catch (error) {
+                console.error("載入失敗:", error);
+                container.innerHTML = "<p style='text-align:center;padding:20px;color:red;'>無法讀取 Google 表格資料。</p>";
+            }
+        }
+
+        fetchHotels();
+    </script>
+</body>
+</html>
