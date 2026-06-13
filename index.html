@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>東京精選飯店對比</title>
     <style>
         :root {
@@ -270,13 +270,69 @@
 
         .map-container iframe { width: 100%; height: 100%; border: none; }
 
-        /* 📱 針對手機與小螢幕的極簡時尚優化排版 */
+        /* 📱 新增：手機端底部極簡切換按鈕列 */
+        .mobile-tabs {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid var(--border-color);
+            z-index: 999;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.03);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px;
+            background: none;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-light);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            font-weight: 600;
+            border-top: 2px solid var(--primary-color);
+        }
+
+        /* 📱 針對手機與小螢幕的自適應重塑 */
         @media (max-width: 768px) {
-            .container { flex-direction: column; height: auto; padding: 14px; gap: 16px; }
-            .map-container { height: 320px; order: 1; border-radius: 8px; position: sticky; top: 0; z-index: 10; }
-            .hotel-list { order: 2; overflow-y: visible; padding-right: 0; gap: 20px; }
+            body { padding-bottom: 60px; } /* 為底部留出按鈕空間 */
+            .container { 
+                flex-direction: column; 
+                height: calc(100vh - 160px); 
+                padding: 16px; 
+                gap: 0; 
+            }
             header { padding: 20px 10px; }
-            .slider-container { height: 200px; } /* 手機上卡片照片高度稍微縮小，比例更精緻 */
+            .slider-container { height: 210px; }
+
+            /* 核心：預設在手機上把列表和地圖都藏起來，由分頁控制顯示 */
+            .hotel-list {
+                display: flex;
+                width: 100%;
+                height: 100%;
+            }
+            .map-container {
+                display: none;
+                width: 100%;
+                height: 100%;
+                border-radius: 8px;
+            }
+
+            /* 當分頁啟動地圖模式時 */
+            .container.map-mode .hotel-list { display: none; }
+            .container.map-mode .map-container { display: block; }
+
+            .mobile-tabs { display: flex; } /* 顯示手機切換列 */
         }
     </style>
 </head>
@@ -287,18 +343,41 @@
         <p>點擊「飯店卡片」切換單間地圖 / 點擊上方標題返回「全飯店總覽」</p>
     </header>
 
-    <div class="container">
+    <div class="container" id="main-container">
         <div class="hotel-list" id="hotel-list">
             <p style="text-align: center; padding: 20px; color: #999; font-size: 0.9rem;">SELECTING BEST PLACES...</p>
         </div>
+        
         <div class="map-container">
             <iframe id="google-map" src="about:blank" allowfullscreen="" loading="lazy"></iframe>
         </div>
     </div>
 
+    <div class="mobile-tabs">
+        <button class="tab-btn active" id="tab-list-btn" onclick="toggleMobileView('list')">🏨 飯店列表</button>
+        <button class="tab-btn" id="tab-map-btn" onclick="toggleMobileView('map')">🗺️ 地圖總覽</button>
+    </div>
+
     <script>
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSo_5C69y2LqOigriDuyjg-FrtFRmGSYNwbQJ7NuxhHL8jx5CHdEmMvlIcyI-H1eKwrWB-pUM9SwRFq/pub?output=csv";
         let globalHotels = []; 
+
+        // 手機版分頁切換邏輯
+        function toggleMobileView(mode) {
+            const container = document.getElementById('main-container');
+            const listBtn = document.getElementById('tab-list-btn');
+            const mapBtn = document.getElementById('tab-map-btn');
+            
+            if (mode === 'map') {
+                container.classList.add('map-mode');
+                mapBtn.classList.add('active');
+                listBtn.classList.remove('active');
+            } else {
+                container.classList.remove('map-mode');
+                listBtn.classList.add('active');
+                mapBtn.classList.remove('active');
+            }
+        }
 
         function parseCSV(text) {
             let p = '', c = '', r = [];
@@ -351,12 +430,9 @@
             return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
         }
 
-        // 🌟 優化版：初始畫面顯示東京錦糸町一帶的全景大範圍地圖
         function showAllHotelsMap() {
             const iframe = document.getElementById('google-map');
             document.querySelectorAll('.hotel-card').forEach(card => card.classList.remove('active'));
-            
-            // 直接定位在錦糸町中心，並把縮放度（z）調到 14，剛好可以在地圖中完整包容你推薦的那幾家飯店！
             iframe.src = `https://maps.google.com/maps?q=${encodeURIComponent("東京錦糸町")}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
         }
 
@@ -365,6 +441,11 @@
             iframe.src = convertToEmbedUrl(mapLink, address);
             document.querySelectorAll('.hotel-card').forEach(card => card.classList.remove('active'));
             if(cardElement) cardElement.classList.add('active');
+            
+            // 🌟 手機版貼心加強：點選卡片或位置後，若在手機端，自動切換到地圖分頁讓姊姊直接看
+            if (window.innerWidth <= 768) {
+                toggleMobileView('map');
+            }
         }
 
         function initSlider(cardId, totalImages) {
